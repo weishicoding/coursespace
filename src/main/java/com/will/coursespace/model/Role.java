@@ -1,4 +1,4 @@
-package model;
+package com.will.coursespace.model;
 
 import com.will.preloved.enums.RoleName;
 import jakarta.persistence.*;

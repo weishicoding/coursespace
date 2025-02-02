@@ -1,4 +1,4 @@
-package model.audit;
+package com.will.coursespace.model.audit;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.EntityListeners;

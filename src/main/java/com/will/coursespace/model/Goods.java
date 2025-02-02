@@ -1,4 +1,4 @@
-package model;
+package com.will.coursespace.model;
 
 import com.will.preloved.model.audit.DateAudit;
 import jakarta.persistence.*;

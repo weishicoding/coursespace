@@ -18,8 +18,8 @@ services:
       - "5432:5432"  # Map container port 5432 to host port 5432
     environment:
       POSTGRES_DB: postgre
-      POSTGRES_USER: postgres  # Set the superuser username
-      POSTGRES_PASSWORD: Password01  # Set the superuser password
+      POSTGRES_USER: admin  # Set the superuser username
+      POSTGRES_PASSWORD: 123456  # Set the superuser password
     volumes:
       - db-data:/var/lib/postgresql/data
     expose:

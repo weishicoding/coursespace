@@ -1,4 +1,4 @@
-package model;
+package com.will.coursespace.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,12 +12,11 @@ import lombok.Setter;
 
 
 
-@Table(name = "category_2")
+@Table(name = "category_3")
 @Getter
 @Setter
 @Entity
-public class CategorySecond {
-
+public class CategoryThird {
     @Id
     @GeneratedValue
     private Long id;
@@ -28,4 +27,8 @@ public class CategorySecond {
 
     @NotNull
     private Long category1id;
+
+    @NotNull
+    private Long category2id;
+
 }
