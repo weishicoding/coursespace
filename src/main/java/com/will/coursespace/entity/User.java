@@ -1,8 +1,11 @@
 package com.will.coursespace.entity;
 
 import com.will.coursespace.enums.AuthProvider;
+import com.will.coursespace.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -23,4 +26,11 @@ public class User {
     private AuthProvider provider;
 
     private String providerId;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+    private Boolean enabled;
+
+    private LocalDateTime createdAt;
 }

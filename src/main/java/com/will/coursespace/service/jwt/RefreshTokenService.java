@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -21,6 +22,10 @@ public class RefreshTokenService {
 
     @Value("${jwt.refresh-token.expiration}")
     private Long refreshTokenDurationMs;
+
+    public Optional<RefreshToken> findByToken(String token) {
+        return refreshTokenRepository.findByToken(token);
+    }
 
     public RefreshToken createRefreshToken(String username) {
         User user = userRepository.findByUsername(username)
@@ -41,5 +46,11 @@ public class RefreshTokenService {
                     "Refresh token was expired. Please make a new signin request");
         }
         return token;
+    }
+
+    public void deleteByUserId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        refreshTokenRepository.deleteByUser(user);
     }
 }

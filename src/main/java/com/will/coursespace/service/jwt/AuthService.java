@@ -1,43 +1,50 @@
 package com.will.coursespace.service.jwt;
 
-import com.will.coursespace.dto.LoginRequest;
-import com.will.coursespace.dto.LogoutRequest;
-import com.will.coursespace.dto.RefreshTokenRequest;
-import com.will.coursespace.dto.RegisterRequest;
+import com.will.coursespace.dto.*;
 import com.will.coursespace.entity.RefreshToken;
 import com.will.coursespace.entity.User;
 import com.will.coursespace.enums.AuthProvider;
+import com.will.coursespace.enums.Role;
+import com.will.coursespace.exception.TokenRefreshException;
 import com.will.coursespace.repository.RefreshTokenRepository;
 import com.will.coursespace.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class AuthService {
-    @Autowired
     private UserRepository userRepository;
 
-    @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
-    @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired
+
     private JwtService jwtService;
+
+    private final AuthenticationManager authenticationManager;
 
     @Value("${jwt.expiration}")
     private Long jwtExpiration;
@@ -49,13 +56,13 @@ public class AuthService {
             if (userRepository.existsByUsername(request.getUsername())) {
                 return ResponseEntity
                         .badRequest()
-                        .body(new MessageResponse("Error: Username is already taken!"));
+                        .body("Error: Username is already taken!");
             }
 
             if (userRepository.existsByEmail(request.getEmail())) {
                 return ResponseEntity
                         .badRequest()
-                        .body(new MessageResponse("Error: Email is already in use!"));
+                        .body("Error: Email is already in use!");
             }
 
             // Create new user
@@ -64,52 +71,62 @@ public class AuthService {
             user.setEmail(request.getEmail());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setProvider(AuthProvider.LOCAL);
-            user.setRole(Role.ROLE_USER);
+            user.setRole(Role.USER);
             user.setEnabled(true);
             user.setCreatedAt(LocalDateTime.now());
 
             userRepository.save(user);
 
             log.info("User registered successfully: {}", request.getUsername());
-            return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+            return ResponseEntity.ok("User registered successfully!");
 
         } catch (Exception e) {
             log.error("Error during registration", e);
             return ResponseEntity
                     .internalServerError()
-                    .body(new MessageResponse("Error during registration"));
+                    .body("Error during registration");
         }
     }
 
     @Transactional
     public ResponseEntity<?> login(LoginRequest request) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            var user = userRepository.findByUsername(request.getUsername())
+                    .orElseThrow(() ->
+                            new UsernameNotFoundException("User not found with username: " + request.getUsername())
+                    );
+            if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new AppException("Invalid credentials");
+            }
+
+            var authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-            String accessToken = jwtService.generateToken(userDetails);
-            RefreshToken refreshToken = createRefreshToken(userDetails.getId());
+            String jwt = jwtService.generateToken((CustomUserDetail)authentication.getPrincipal());
+            // generate the refresh token
+            RefreshToken refreshToken = jwtService.generateToken(user.getUsername());
 
-            return ResponseEntity.ok(new AuthResponse(
-                    accessToken,
-                    refreshToken.getToken(),
-                    "Bearer",
-                    jwtExpiration,
-                    userDetails.getUsername(),
-                    userDetails.getAuthorities().stream()
-                            .map(GrantedAuthority::getAuthority)
-                            .collect(Collectors.toList())
-            ));
+            // add refresh token for http-only cookie
+            Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken.getId());
+            refreshTokenCookie.setHttpOnly(true);
+            refreshTokenCookie.setSecure(true); // Use secure cookies in production
+            refreshTokenCookie.setPath("/");
 
-        } catch (AuthenticationException e) {
-            log.error("Authentication failed for user: {}", request.getUsername());
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(new MessageResponse("Invalid username or password"));
+            response.addCookie(refreshTokenCookie);
+            return ResponseEntity.ok(JwtAuthenticationResponse.builder()
+                    .accessToken(jwt)
+                    .roles(user.getRoles())
+                    .username(user.getUsername())
+                    .build());
+        } catch (Exception e) {
+            log.error("unauthorized", e);
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -140,13 +157,13 @@ public class AuthService {
                     String newAccessToken = jwtService.generateToken(UserDetailsImpl.build(user));
                     return ResponseEntity.ok(new TokenRefreshResponse(newAccessToken, requestRefreshToken));
                 })
-                .orElseThrow(() -> new TokenRefreshException("Refresh token not found"));
+                .orElseThrow(() -> new TokenRefreshException(request.getRefreshToken(), "Refresh token not found"));
     }
 
     private RefreshToken verifyExpiration(RefreshToken token) {
         if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
             refreshTokenRepository.delete(token);
-            throw new TokenRefreshException("Refresh token was expired");
+            throw new TokenRefreshException(token.getToken(), "Refresh token was expired");
         }
         return token;
     }
@@ -157,8 +174,8 @@ public class AuthService {
                 .map(token -> {
                     refreshTokenRepository.delete(token);
                     SecurityContextHolder.clearContext();
-                    return ResponseEntity.ok(new MessageResponse("Logout successful"));
+                    return ResponseEntity.ok("Logout successful");
                 })
-                .orElseThrow(() -> new TokenRefreshException("Refresh token not found"));
+                .orElseThrow( () -> new TokenRefreshException(request.getRefreshToken(), "Refresh token not found"));
     }
 }
