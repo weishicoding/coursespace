@@ -2,7 +2,7 @@ package com.will.coursespace.config;
 
 import com.will.coursespace.filter.JwtAuthenticationFilter;
 import com.will.coursespace.service.jwt.OAuth2UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,12 +17,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@AllArgsConstructor
 public class SecurityConfig {
-    @Autowired
     private JwtAuthenticationFilter jwtAuthFilter;
 
-    @Autowired
     private OAuth2UserService oAuth2UserService;
+
+    private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

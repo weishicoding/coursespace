@@ -1,9 +1,6 @@
 package com.will.coursespace.controller;
 
-import com.nimbusds.openid.connect.sdk.LogoutRequest;
-import com.will.coursespace.dto.LoginRequest;
-import com.will.coursespace.dto.RefreshTokenRequest;
-import com.will.coursespace.dto.RegisterRequest;
+import com.will.coursespace.dto.*;
 import com.will.coursespace.entity.RefreshToken;
 import com.will.coursespace.exception.TokenRefreshException;
 import com.will.coursespace.service.jwt.AuthService;
@@ -45,7 +42,7 @@ public class AuthController {
                 .map(RefreshToken::getUser)
                 .map(user -> {
                     String token = jwtService.generateToken(user.getUsername());
-                    return ResponseEntity.ok(new TokenRefreshResponse(token, requestRefreshToken));
+                    return ResponseEntity.ok(JwtAuthenticationResponse.builder().accessToken(token).username(user.getUsername()).build());
                 })
                 .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
                         "Refresh token is not in database!"));
@@ -55,16 +52,5 @@ public class AuthController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> logoutUser(@Valid @RequestBody LogoutRequest request) {
         return authService.logout(request);
-    }
-
-    @PostMapping("/google")
-    public ResponseEntity<?> googleAuth(@Valid @RequestBody GoogleAuthRequest request) {
-        return authService.authenticateGoogle(request);
-    }
-
-    @GetMapping("/validate")
-    public ResponseEntity<?> validateToken(@RequestParam String token) {
-        boolean isValid = jwtService.validateToken(token);
-        return ResponseEntity.ok(new TokenValidationResponse(isValid));
     }
 }
