@@ -1,9 +1,10 @@
 package com.will.coursespace.service.jwt;
 
 import com.will.coursespace.dto.*;
+import com.will.coursespace.dto.authentication.AuthenticationRequest;
+import com.will.coursespace.dto.authentication.AuthenticationResponse;
 import com.will.coursespace.entity.RefreshToken;
 import com.will.coursespace.entity.User;
-import com.will.coursespace.enums.AuthProvider;
 import com.will.coursespace.enums.Role;
 import com.will.coursespace.exception.TokenRefreshException;
 import com.will.coursespace.repository.UserRepository;
@@ -14,16 +15,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.HashMap;
 
 
 @Service
@@ -37,60 +35,40 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
 
-    public ResponseEntity<?> registerUser(RegisterRequest request) {
-        // Check if username exists
-        if (userRepository.existsByUsername(request.getUsername())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Error: Username is already taken!");
-        }
-
-        // Check if email exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Error: Email is already in use!");
-        }
-
+    @Transactional(rollbackFor = Exception.class)
+    public AuthenticationResponse registerUser(RegisterRequest request) {
         // Create new user
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setProvider(AuthProvider.LOCAL);
-        user.setRole(Role.USER);
-        user.setEnabled(true);
-        user.setCreatedAt(LocalDateTime.now());
+        User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.getEmail())
+                .role(Role.USER)
+                .build();
 
         userRepository.save(user);
-
+        String token = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefresh(new HashMap<>(), user);
         log.info("User registered successfully: {}", request.getUsername());
-        return ResponseEntity.ok("User registered successfully!");
+        return AuthenticationResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken)
+                .build();
     }
 
-    public ResponseEntity<?> login(LoginRequest request) {
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
+    public AuthenticationResponse login(AuthenticationRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+        );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
-            String accessToken = jwtService.generateToken(userDetails.getUsername());
-            RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUsername());
+        String token = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefresh(new HashMap<>(), user);
 
-            return ResponseEntity.ok(JwtAuthenticationResponse.builder()
-                    .accessToken(accessToken)
-                    .username(request.getUsername())
-                    .build());
-
-        } catch (AuthenticationException e) {
-            log.error("Authentication failed for user: {}", request.getUsername());
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid username or password");
-        }
+        return AuthenticationResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken)
+                .build();
     }
 
     public ResponseEntity<?> logout(LogoutRequest request) {
