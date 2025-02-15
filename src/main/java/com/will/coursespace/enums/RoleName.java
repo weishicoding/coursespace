@@ -1,6 +1,6 @@
 package com.will.coursespace.enums;
 
-public enum Role {
+public enum RoleName {
     ADMIN,
     USER
 }

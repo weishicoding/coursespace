@@ -1,14 +1,8 @@
 package com.will.coursespace.service.jwt;
 
 import com.will.coursespace.config.CustomAuthenticationEntryPoint;
-import com.will.coursespace.config.OAuth2AuthenticationFailureHandler;
-import com.will.coursespace.config.OAuth2AuthenticationSuccessHandler;
-import com.will.coursespace.entity.User;
-import com.will.coursespace.enums.AuthProvider;
 import com.will.coursespace.filter.JwtAuthenticationFilter;
-import com.will.coursespace.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,9 +14,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;

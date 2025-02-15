@@ -5,7 +5,7 @@ import com.will.coursespace.dto.authentication.AuthenticationRequest;
 import com.will.coursespace.dto.authentication.AuthenticationResponse;
 import com.will.coursespace.entity.RefreshToken;
 import com.will.coursespace.entity.User;
-import com.will.coursespace.enums.Role;
+import com.will.coursespace.enums.RoleName;
 import com.will.coursespace.exception.TokenRefreshException;
 import com.will.coursespace.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,13 +14,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 
 
@@ -42,7 +40,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
-                .role(Role.USER)
+                .role(RoleName.USER)
                 .build();
 
         userRepository.save(user);
