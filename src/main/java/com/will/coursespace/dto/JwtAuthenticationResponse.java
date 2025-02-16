@@ -1,7 +1,7 @@
 package com.will.coursespace.dto;
 
 
-import com.will.coursespace.enums.RoleName;
+import com.will.coursespace.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,5 +20,5 @@ public class JwtAuthenticationResponse {
 
     private String username;
 
-    private Set<RoleName> roles;
+    private Set<Role> roles;
 }

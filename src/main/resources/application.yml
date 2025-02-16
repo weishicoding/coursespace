@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydb
+    username: admin
+    password: 123456!
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+      database: postgresql
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+
+
+jwt:
+  jwtSecret: 1d7e370c77a42be6c9b65ce6c49f5b9989069d1e7b1ee30ac30e67fecbd62fce7bb970939bab8b6e002d9d16258667f07190437f2cbb7dec066203899863771f12c5f28d68d648c1c47223fdd983eccd2871ca77b0c74c9a37e2dafc07e204f09bfcc585e3bb4af7c840a503bbc331ba7984f3476b7494708894583a59e1f009c7b239dd6cc487010660d8962abddcbb4031f10f82bf4ddbdefbbcd3482265610a8a20399cf8bc64503d8e708e42ca93491d138bbc7c2fc8f7d004b4a7aa3dd5f8c91d010998cdcd75977dcf0336b854ef5ec5f85bab46a2ce85007ef2fd3d8c6a735ea8e80a554f1d482ec1796916cfa1fe3ceb3ada2a382764620d57bab46d
+  jwtExpirationInMs: 7200000
+  refreshTokenExpirationInMs: 604800000

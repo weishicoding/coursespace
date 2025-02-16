@@ -7,6 +7,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.micrometer.common.util.StringUtils;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,13 +21,13 @@ import java.util.Objects;
 import java.util.function.Function;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    @Value("${jwt.jwtSecret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration}")
+    @Value("${jwt.jwtExpirationInMs}")
     private Long jwtExpiration;
 
     private final UserDetailsService userDetailsService;
@@ -62,7 +63,7 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    private String extractUsername(String token) {
+    public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 

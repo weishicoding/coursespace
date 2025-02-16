@@ -5,7 +5,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,37 +19,36 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
     private JwtService jwtService;
 
-    @Autowired
     private UserDetailsService userDetailsService;
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+        // get all jwt context from request
+        final String jwt = extractJwtFromRequest(request);
+        if (jwt == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        final String username = jwtService.extractUsername(jwt);
 
-        try {
-            String jwt = extractJwtFromRequest(request);
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            if (jwt != null && jwtService.validateToken(jwt)) {
-                String username = jwtService.extractUsername(jwt);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
 
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
-        } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e);
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);
